@@ -1,0 +1,8 @@
+#keep the repo light and clean
+__pycache__/
+*.pyc
+.venv/
+venv/
+.vscode/
+.env
+*.drawio
