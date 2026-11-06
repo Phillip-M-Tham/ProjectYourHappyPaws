@@ -136,6 +136,26 @@ pygame.display.set_caption("Project Your Happy Paws")
 clock = pygame.time.Clock()
 # SET running = true
 running = True
+#
+selectedButton=0
+dpadPressed = False
+aButtonPressed=False
+bButtonPressed=False
+
+options=False
+outOfOrderText1 = menuFont.render("Out of Order", True, "white")
+outOfOrderText2 = menuFont.render("Press B to back out!", True, "white")
+outOfOrderSign=pygame.Rect(0,0,1000,500)
+outOfOrderSign.center=(screenWidth // 2, screenHeight // 2)
+
+gameMode=False
+gauntletText = menuFont.render("Gauntlet",True,"white")
+levelSelectText = menuFont.render("Level Select",True,"white")
+guantletBtn= pygame.Rect(0,0,300,70)
+levelSelectBtn= pygame.Rect(0,0,300,70)
+guantletBtn.center=(startBtn.centerx, startBtn.centery)
+levelSelectBtn.center=(startBtn.centerx, startBtn.centery + 90)
+    #quitTextRect= quitText.get_rect(center=quitButton.center)
 
 #start game loop
 while running:
@@ -204,10 +224,22 @@ while running:
         # A button
         if gamepad.wButtons & A_BUTTON:
             print("A BUTTON")
+            #Quit Action
+            if(mainMenu==True and selectedButton==2):
+                running = False
+            elif(mainMenu==True and selectedButton==1):
+                options=True
+            elif(mainMenu==True and selectedButton==0):
+                gameMode=True
 
         # B button
         if gamepad.wButtons & B_BUTTON:
             print("B BUTTON")
+            if options==True and bButtonPressed==False:
+                options=False
+                bButtonPressed=True
+            else:
+                bButtonPressed=False
 
         # X button
         if gamepad.wButtons & X_BUTTON:
@@ -220,10 +252,31 @@ while running:
         # D-pad Up
         if gamepad.wButtons & DPAD_UP:
             print("DPAD UP")
-
+            if mainMenu==True and gameMode==False and dpadPressed==False:
+                selectedButton = selectedButton-1
+                if selectedButton < 0:
+                    selectedButton=2
+                dpadPressed=True
+            elif gameMode==True:
+                if selectedButton==4:
+                    selectedButton=5
+                else:
+                    selectedButton=4
         # D-pad Down
-        if gamepad.wButtons & DPAD_DOWN:
+        elif gamepad.wButtons & DPAD_DOWN:
             print("DPAD DOWN")
+            if mainMenu==True and gameMode==False and dpadPressed==False:
+                selectedButton +=1
+                if selectedButton >2:
+                    selectedButton=0
+                dpadPressed=True
+            elif gameMode==True:
+                if selectedButton==4:
+                    selectedButton=5
+                else:
+                    selectedButton=4
+        else:
+            dpadPressed=False
 
         # D-pad Left
         if gamepad.wButtons & DPAD_LEFT:
@@ -234,19 +287,61 @@ while running:
             print("DPAD RIGHT")
     screen.blit(background, (0, 0))
     #run this if we are using the main menu
-    if mainMenu == True:
+    if mainMenu == True and options==False and gameMode==False:
         #draw Title
         screen.blit(titleText,titleTextRect)
         #draw start button
-        pygame.draw.rect(screen,"black",startBtn)
+        
+        if selectedButton==0:
+            pygame.draw.rect(screen, "gray", startBtn)
+        else:
+            pygame.draw.rect(screen,"black",startBtn)
+        
         screen.blit(startText, startTextRect)
         
         #draw option button
-        pygame.draw.rect(screen,"black",optionBtn)
+        if selectedButton==1:
+            pygame.draw.rect(screen,"gray",optionBtn)
+        else:
+            pygame.draw.rect(screen,"black",optionBtn)
         screen.blit(optionText, optionTextRect)
         #draw exit button
-        pygame.draw.rect(screen,"black",quitBtn)
+        if selectedButton==2:
+            pygame.draw.rect(screen,"gray",quitBtn)
+        else:
+            pygame.draw.rect(screen,"black",quitBtn)
         screen.blit(quitText, quitTextRect)
+
+        #selectedButton=0 Start
+        #selectedButton=1 Options
+        #selectdButton=2 Quit
+    #run this if using options
+    elif options==True:
+        pygame.draw.rect(screen,"gray",outOfOrderSign)
+        
+        text1Rect = outOfOrderText1.get_rect(center=(outOfOrderSign.centerx, outOfOrderSign.centery - 45))
+
+        text2Rect = outOfOrderText2.get_rect(center=(outOfOrderSign.centerx, outOfOrderSign.centery + 45))
+
+        screen.blit(outOfOrderText1, text1Rect)
+        screen.blit(outOfOrderText2, text2Rect)
+    elif gameMode==True:
+        #selectedButton=4 Gauntlet
+        #selectdButton=5 Level Select
+        btn1TextRect=gauntletText.get_rect(center=(guantletBtn.centerx,guantletBtn.centery -45))
+        btn2TextRect=levelSelectText.get_rect(center=(levelSelectBtn.centerx,levelSelectBtn.centery +45))
+
+        if selectedButton==4:
+            pygame.draw.rect(screen, "gray", guantletBtn)
+        else:
+            pygame.draw.rect(screen,"black",guantletBtn)
+        screen.blit(gauntletText, btn1TextRect)
+
+        if selectedButton==5:
+            pygame.draw.rect(screen, "gray", levelSelectBtn)
+        else:
+            pygame.draw.rect(screen,"black",levelSelectBtn)
+        screen.blit(levelSelectText, btn2TextRect)
     #set up exit
     for event in pygame.event.get():
 
