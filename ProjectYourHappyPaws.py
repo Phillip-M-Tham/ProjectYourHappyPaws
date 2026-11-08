@@ -151,10 +151,13 @@ outOfOrderSign.center=(screenWidth // 2, screenHeight // 2)
 gameMode=False
 gauntletText = menuFont.render("Gauntlet",True,"white")
 levelSelectText = menuFont.render("Level Select",True,"white")
-guantletBtn= pygame.Rect(0,0,300,70)
-levelSelectBtn= pygame.Rect(0,0,300,70)
+gameModeBtnWidth=max(gauntletText.get_width(),levelSelectText.get_width())+60
+guantletBtn= pygame.Rect(0,0,gameModeBtnWidth,70)
+levelSelectBtn= pygame.Rect(0,0,gameModeBtnWidth,70)
 guantletBtn.center=(startBtn.centerx, startBtn.centery)
 levelSelectBtn.center=(startBtn.centerx, startBtn.centery + 90)
+guantletTextRect=gauntletText.get_rect(center=guantletBtn.center)
+levelSelectTextRect=levelSelectText.get_rect(center=levelSelectBtn.center)
     #quitTextRect= quitText.get_rect(center=quitButton.center)
 
 #start game loop
@@ -231,6 +234,7 @@ while running:
                 options=True
             elif(mainMenu==True and selectedButton==0):
                 gameMode=True
+                selectedButton=3
 
         # B button
         if gamepad.wButtons & B_BUTTON:
@@ -238,8 +242,12 @@ while running:
             if options==True and bButtonPressed==False:
                 options=False
                 bButtonPressed=True
+            elif gameMode==True and bButtonPressed==False:
+                gameMode=False
             else:
                 bButtonPressed=False
+            if mainMenu==True:
+                selectedButton=0
 
         # X button
         if gamepad.wButtons & X_BUTTON:
@@ -257,11 +265,12 @@ while running:
                 if selectedButton < 0:
                     selectedButton=2
                 dpadPressed=True
-            elif gameMode==True:
-                if selectedButton==4:
-                    selectedButton=5
-                else:
+            elif gameMode==True and dpadPressed==False:
+                if selectedButton==3:
                     selectedButton=4
+                else:
+                    selectedButton=3
+                dpadPressed=True
         # D-pad Down
         elif gamepad.wButtons & DPAD_DOWN:
             print("DPAD DOWN")
@@ -270,11 +279,12 @@ while running:
                 if selectedButton >2:
                     selectedButton=0
                 dpadPressed=True
-            elif gameMode==True:
-                if selectedButton==4:
-                    selectedButton=5
-                else:
+            elif gameMode==True and dpadPressed==False:
+                if selectedButton==3:
                     selectedButton=4
+                else:
+                    selectedButton=3
+                dpadPressed=True
         else:
             dpadPressed=False
 
@@ -326,22 +336,20 @@ while running:
         screen.blit(outOfOrderText1, text1Rect)
         screen.blit(outOfOrderText2, text2Rect)
     elif gameMode==True:
-        #selectedButton=4 Gauntlet
-        #selectdButton=5 Level Select
-        btn1TextRect=gauntletText.get_rect(center=(guantletBtn.centerx,guantletBtn.centery -45))
-        btn2TextRect=levelSelectText.get_rect(center=(levelSelectBtn.centerx,levelSelectBtn.centery +45))
+        #selectedButton=3 Gauntlet
+        #selectdButton=4 Level Select
 
-        if selectedButton==4:
+        if selectedButton==3:
             pygame.draw.rect(screen, "gray", guantletBtn)
         else:
             pygame.draw.rect(screen,"black",guantletBtn)
-        screen.blit(gauntletText, btn1TextRect)
+        screen.blit(gauntletText, guantletTextRect)
 
-        if selectedButton==5:
+        if selectedButton==4:
             pygame.draw.rect(screen, "gray", levelSelectBtn)
         else:
             pygame.draw.rect(screen,"black",levelSelectBtn)
-        screen.blit(levelSelectText, btn2TextRect)
+        screen.blit(levelSelectText, levelSelectTextRect)
     #set up exit
     for event in pygame.event.get():
 
