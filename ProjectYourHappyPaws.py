@@ -28,6 +28,16 @@ class XINPUT_STATE(ctypes.Structure):
         ("Gamepad", XINPUT_GAMEPAD),
     ]
 
+def fitText(text, fontPath, maxFontSize, maxWidth):
+
+    fontSize = maxFontSize
+    font = pygame.font.Font(fontPath, fontSize)
+
+    while font.size(text)[0] > maxWidth:
+        fontSize -= 1
+        font = pygame.font.Font(fontPath, fontSize)
+
+    return font
 
 def setMainMenu():
     #set background pic to main menu pic
@@ -158,7 +168,42 @@ guantletBtn.center=(startBtn.centerx, startBtn.centery)
 levelSelectBtn.center=(startBtn.centerx, startBtn.centery + 90)
 guantletTextRect=gauntletText.get_rect(center=guantletBtn.center)
 levelSelectTextRect=levelSelectText.get_rect(center=levelSelectBtn.center)
-    #quitTextRect= quitText.get_rect(center=quitButton.center)
+
+characterSelect=False
+#char select font scale
+availableWidth = int(screenWidth * 0.90)
+gap = 20
+
+charBtnWidth = (availableWidth - (2 * gap)) // 3
+charBtnHeight = 70
+
+rowStart = (screenWidth - availableWidth) // 2
+
+char1Btn = pygame.Rect(rowStart, 0, charBtnWidth, charBtnHeight)
+char2Btn = pygame.Rect(rowStart + charBtnWidth + gap, 0, charBtnWidth, charBtnHeight)
+char3Btn = pygame.Rect(rowStart + (charBtnWidth + gap) * 2, 0, charBtnWidth, charBtnHeight)
+
+char1Btn.centery = startBtn.centery
+char2Btn.centery = startBtn.centery
+char3Btn.centery = startBtn.centery
+
+textWidth = charBtnWidth - 30
+
+char1Font = fitText("Elsa", fontPath, 50, textWidth)
+char2Font = fitText("Hugh's Char", fontPath, 50, textWidth)
+char3Font = fitText("Yaun-Shuo's Char", fontPath, 50, textWidth)
+
+selectedCharacter=0
+#char 0,1,2 for 3 characters
+
+char1Text = char1Font.render("Elsa", True, "white")
+char2Text = char2Font.render("Hugh's Char", True, "white")
+char3Text = char3Font.render("Yaun-Shuo's Char", True, "white")
+
+char1TextRect=char1Text.get_rect(center=char1Btn.center)
+char2TextRect=char2Text.get_rect(center=char2Btn.center)
+char3TextRect=char3Text.get_rect(center=char3Btn.center)
+
 
 #start game loop
 while running:
@@ -228,26 +273,40 @@ while running:
         if gamepad.wButtons & A_BUTTON:
             print("A BUTTON")
             #Quit Action
-            if(mainMenu==True and selectedButton==2):
-                running = False
-            elif(mainMenu==True and selectedButton==1):
-                options=True
-            elif(mainMenu==True and selectedButton==0):
-                gameMode=True
-                selectedButton=3
+            if(aButtonPressed ==False):
+                if(mainMenu==True and selectedButton==2):
+                    running = False
+                elif(mainMenu==True and selectedButton==1):
+                    options=True
+                elif(mainMenu==True and selectedButton==0):
+                    gameMode=True
+                    selectedButton=3
+                elif(gameMode==True and selectedButton==3):
+                    gameMode=False
+                    characterSelect=True
+                    selectedCharacter=0
+                aButtonPressed=True
+        else:
+            aButtonPressed=False
 
         # B button
         if gamepad.wButtons & B_BUTTON:
             print("B BUTTON")
-            if options==True and bButtonPressed==False:
-                options=False
+            if(bButtonPressed==False):
+                if options==True:
+                    options=False
+                elif gameMode==True:
+                    selectedButton=0
+                    gameMode=False
+                elif characterSelect==True:
+                    characterSelect=False
+                    gameMode=True
+                    selectedButton=3
+                elif mainMenu==True:
+                    selectedButton=0
                 bButtonPressed=True
-            elif gameMode==True and bButtonPressed==False:
-                gameMode=False
-            else:
-                bButtonPressed=False
-            if mainMenu==True:
-                selectedButton=0
+        else:
+            bButtonPressed=False
 
         # X button
         if gamepad.wButtons & X_BUTTON:
@@ -297,7 +356,7 @@ while running:
             print("DPAD RIGHT")
     screen.blit(background, (0, 0))
     #run this if we are using the main menu
-    if mainMenu == True and options==False and gameMode==False:
+    if mainMenu == True and options==False and gameMode==False and characterSelect==False:
         #draw Title
         screen.blit(titleText,titleTextRect)
         #draw start button
@@ -335,7 +394,7 @@ while running:
 
         screen.blit(outOfOrderText1, text1Rect)
         screen.blit(outOfOrderText2, text2Rect)
-    elif gameMode==True:
+    elif gameMode==True and characterSelect==False:
         #selectedButton=3 Gauntlet
         #selectdButton=4 Level Select
 
@@ -350,6 +409,25 @@ while running:
         else:
             pygame.draw.rect(screen,"black",levelSelectBtn)
         screen.blit(levelSelectText, levelSelectTextRect)
+    elif characterSelect==True:
+        if selectedCharacter==0:
+            pygame.draw.rect(screen,"grey",char1Btn)
+        else:
+            pygame.draw.rect(screen,"black",char1Btn)
+        screen.blit(char1Text, char1TextRect)
+
+        if selectedCharacter==1:
+            pygame.draw.rect(screen,"gray",char2Btn)
+        else:
+            pygame.draw.rect(screen,"black",char2Btn)
+        screen.blit(char2Text, char2TextRect)
+
+        if selectedCharacter==2:
+            pygame.draw.rect(screen,"gray",char3Btn)
+        else:
+            pygame.draw.rect(screen,"black",char3Btn)
+        screen.blit(char3Text, char3TextRect)
+
     #set up exit
     for event in pygame.event.get():
 
