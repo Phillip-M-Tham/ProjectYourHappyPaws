@@ -206,6 +206,46 @@ char1TextRect=char1Text.get_rect(center=char1Btn.center)
 char2TextRect=char2Text.get_rect(center=char2Btn.center)
 char3TextRect=char3Text.get_rect(center=char3Btn.center)
 
+gameModes=["gauntlet","levelSelect"]
+
+playingLevel=False
+guantletLevel=1
+playerX=0
+playerY=0
+playerWidth=200
+playerHeight=300
+
+def loadLevel(fileName):
+    levelMap = []
+
+    with open(fileName, "r") as file:
+        for line in file:
+            row = list(line.strip())
+            levelMap.append(row)
+
+    return levelMap
+
+
+def playLevel(character,level):
+    screen.fill("black")
+    testText=menuFont.render(f"character {character} - level {level}",True,"white")
+    screen.blit(testText,(100,100))
+
+def startLevelManager(character,gameMode,level):
+    if gameMode=="gauntlet":
+        if level==-1:
+            level=1
+            levelPath=Root/"Levels"/"Level1.txt"
+            levelMap = loadLevel(levelPath)
+
+            print("Rows:", len(levelMap))
+            print("Columns:", len(levelMap[0]))
+            print("Spawn tile:", levelMap[12][0])
+    else:
+        pass
+    return level, levelMap
+
+
 
 #start game loop
 while running:
@@ -287,6 +327,10 @@ while running:
                     gameMode=False
                     characterSelect=True
                     selectedCharacter=0
+                elif(characterSelect==True and selectedCharacter==0):
+                    characterSelect=False
+                    playingLevel=True
+                    guantletLevel,levelMap=startLevelManager(0,gameModes[0],-1)
                 aButtonPressed=True
         else:
             aButtonPressed=False
@@ -369,7 +413,7 @@ while running:
             dpadPressedHorizontal=False
     screen.blit(background, (0, 0))
     #run this if we are using the main menu
-    if mainMenu == True and options==False and gameMode==False and characterSelect==False:
+    if mainMenu == True and options==False and gameMode==False and characterSelect==False and playingLevel==False:
         #draw Title
         screen.blit(titleText,titleTextRect)
         #draw start button
@@ -440,6 +484,8 @@ while running:
         else:
             pygame.draw.rect(screen,"black",char3Btn)
         screen.blit(char3Text, char3TextRect)
+    elif playingLevel==True:
+        playLevel(selectedCharacter,guantletLevel)
 
     #set up exit
     for event in pygame.event.get():
