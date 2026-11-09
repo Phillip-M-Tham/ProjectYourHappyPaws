@@ -148,9 +148,11 @@ clock = pygame.time.Clock()
 running = True
 #
 selectedButton=0
-dpadPressed = False
+dpadPressedVertical = False
+dpadPressedHorizontal=False
 aButtonPressed=False
 bButtonPressed=False
+
 
 options=False
 outOfOrderText1 = menuFont.render("Out of Order", True, "white")
@@ -319,41 +321,52 @@ while running:
         # D-pad Up
         if gamepad.wButtons & DPAD_UP:
             print("DPAD UP")
-            if mainMenu==True and gameMode==False and dpadPressed==False:
+            if mainMenu==True and gameMode==False and dpadPressedVertical==False:
                 selectedButton = selectedButton-1
                 if selectedButton < 0:
                     selectedButton=2
-                dpadPressed=True
-            elif gameMode==True and dpadPressed==False:
+                dpadPressedVertical=True
+            elif gameMode==True and dpadPressedVertical==False:
                 if selectedButton==3:
                     selectedButton=4
                 else:
                     selectedButton=3
-                dpadPressed=True
+                dpadPressedVertical=True
         # D-pad Down
         elif gamepad.wButtons & DPAD_DOWN:
             print("DPAD DOWN")
-            if mainMenu==True and gameMode==False and dpadPressed==False:
+            if mainMenu==True and gameMode==False and dpadPressedVertical==False:
                 selectedButton +=1
                 if selectedButton >2:
                     selectedButton=0
-                dpadPressed=True
-            elif gameMode==True and dpadPressed==False:
+                dpadPressedVertical=True
+            elif gameMode==True and dpadPressedVertical==False:
                 if selectedButton==3:
                     selectedButton=4
                 else:
                     selectedButton=3
-                dpadPressed=True
+                dpadPressedVertical=True
         else:
-            dpadPressed=False
+            dpadPressedVertical=False
 
         # D-pad Left
         if gamepad.wButtons & DPAD_LEFT:
             print("DPAD LEFT")
-
+            if characterSelect==True and dpadPressedHorizontal==False:
+                selectedCharacter =selectedCharacter-1
+                if selectedCharacter <0:
+                    selectedCharacter=2
+                dpadPressedHorizontal=True
         # D-pad Right
-        if gamepad.wButtons & DPAD_RIGHT:
+        elif gamepad.wButtons & DPAD_RIGHT:
             print("DPAD RIGHT")
+            if characterSelect==True and dpadPressedHorizontal==False:
+                selectedCharacter +=1
+                if selectedCharacter >2:
+                    selectedCharacter=0
+                dpadPressedHorizontal =True
+        else:
+            dpadPressedHorizontal=False
     screen.blit(background, (0, 0))
     #run this if we are using the main menu
     if mainMenu == True and options==False and gameMode==False and characterSelect==False:
