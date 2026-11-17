@@ -218,6 +218,10 @@ tileSize=50
 
 playerRect=None
 playerImage=None
+playerSpeed=10
+
+#level camera renderer
+cameraY=0
 
 def findPlayerStart(theMap):
     playerRow=-1
@@ -249,12 +253,28 @@ def loadLevel(fileName):
 
     return levelMap
 
+def drawLevelMap(theMap,cameraY):
+    for row in range(len(theMap)):
+        for col in range(len(theMap[row])):
+            tile = theMap[row][col]
+            worldX = col * tileSize
+            worldY = row * tileSize
 
-def playLevel(character,level,playerImg,playerRect):
+            screenY=worldY-cameraY
+
+            tileRect = pygame.Rect(worldX,screenY,tileSize,tileSize)
+            if tile == "S":
+                pygame.draw.rect(screen,"green",tileRect)
+            if tile == "1":
+                pygame.draw.rect(screen,"white",tileRect)
+
+def playLevel(character,level,playerImg,playerRect,theMap,cameraY):
     screen.fill("black")
     testText=menuFont.render(f"character {character} - level {level}",True,"white")
-    screen.blit(testText,(100,100))
-    screen.blit(playerImg,playerRect)
+    drawLevelMap(theMap,cameraY)
+    playerScreenY = playerRect.y - cameraY
+    #screen.blit(testText,(100,100))
+    screen.blit(playerImg,(playerRect.x,playerScreenY))
 
 def startLevelManager(character,gameMode,level):
     if gameMode=="gauntlet":
@@ -358,6 +378,8 @@ while running:
                     guantletLevel,levelMap=startLevelManager(0,gameModes[0],-1)
                     playerPath=Root/"Pics"/"Chars"/"char1.png"
                     playerImage, playerRect=spawnPlayer(levelMap,playerPath)
+                    mapHeight = len(levelMap) * tileSize
+                    cameraY = mapHeight - screenHeight
                 aButtonPressed=True
         else:
             aButtonPressed=False
@@ -512,7 +534,22 @@ while running:
             pygame.draw.rect(screen,"black",char3Btn)
         screen.blit(char3Text, char3TextRect)
     elif playingLevel==True:
-        playLevel(selectedCharacter,guantletLevel,playerImage,playerRect)
+        #Get player input
+        # Player input
+        if abs(leftY) > 8000:
+            normalizedY = leftY / 32767
+            playerRect.y -= normalizedY * playerSpeed
+
+        cameraTop = screenHeight * 0.25
+        cameraBottom = screenHeight
+        playerScreenY=playerRect.y-cameraY
+        #center camera around player
+        if playerScreenY < cameraTop:
+            cameraY = playerRect.y - cameraTop
+        elif playerScreenY + playerRect.height > cameraBottom:
+            cameraY = playerRect.bottom - cameraBottom
+        #Draw update
+        playLevel(selectedCharacter,guantletLevel,playerImage,playerRect,levelMap,cameraY)
 
     #set up exit
     for event in pygame.event.get():
