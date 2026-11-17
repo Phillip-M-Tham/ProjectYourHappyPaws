@@ -214,6 +214,30 @@ playerX=0
 playerY=0
 playerWidth=200
 playerHeight=300
+tileSize=50
+
+playerRect=None
+playerImage=None
+
+def findPlayerStart(theMap):
+    playerRow=-1
+    playerCol=-1
+    for row in range(len(theMap)):
+        for col in range(len(theMap[row])):
+            if theMap[row][col]=="S":
+                playerRow=row
+                playerCol=col
+                break
+    return playerRow,playerCol
+
+def spawnPlayer(theMap,imagePath):
+    spawnRow,spawnCol=findPlayerStart(theMap)
+    playerX= spawnCol*tileSize 
+    playerY= spawnRow*tileSize
+    playerImage=pygame.image.load(imagePath).convert_alpha()
+    playerRect=playerImage.get_rect()
+    playerRect.topleft = (playerX, playerY)
+    return playerImage,playerRect
 
 def loadLevel(fileName):
     levelMap = []
@@ -226,10 +250,11 @@ def loadLevel(fileName):
     return levelMap
 
 
-def playLevel(character,level):
+def playLevel(character,level,playerImg,playerRect):
     screen.fill("black")
     testText=menuFont.render(f"character {character} - level {level}",True,"white")
     screen.blit(testText,(100,100))
+    screen.blit(playerImg,playerRect)
 
 def startLevelManager(character,gameMode,level):
     if gameMode=="gauntlet":
@@ -237,10 +262,10 @@ def startLevelManager(character,gameMode,level):
             level=1
             levelPath=Root/"Levels"/"Level1.txt"
             levelMap = loadLevel(levelPath)
-
+            playerStartRow,playerStartCol=findPlayerStart(levelMap)
             print("Rows:", len(levelMap))
             print("Columns:", len(levelMap[0]))
-            print("Spawn tile:", levelMap[12][0])
+            print("Spawn tile:", levelMap[playerStartRow][playerStartCol],"Found at ",playerStartRow,playerStartCol)
     else:
         pass
     return level, levelMap
@@ -331,6 +356,8 @@ while running:
                     characterSelect=False
                     playingLevel=True
                     guantletLevel,levelMap=startLevelManager(0,gameModes[0],-1)
+                    playerPath=Root/"Pics"/"Chars"/"char1.png"
+                    playerImage, playerRect=spawnPlayer(levelMap,playerPath)
                 aButtonPressed=True
         else:
             aButtonPressed=False
@@ -485,7 +512,7 @@ while running:
             pygame.draw.rect(screen,"black",char3Btn)
         screen.blit(char3Text, char3TextRect)
     elif playingLevel==True:
-        playLevel(selectedCharacter,guantletLevel)
+        playLevel(selectedCharacter,guantletLevel,playerImage,playerRect)
 
     #set up exit
     for event in pygame.event.get():
