@@ -557,13 +557,23 @@ while running:
                     break
 
         cameraTop = screenHeight * 0.25
-        cameraBottom = screenHeight
+        cameraBottom = screenHeight * 0.80
+        #cameraBottom = screenHeight
         playerScreenY=playerRect.y-cameraY
         #center camera around player
         if playerScreenY < cameraTop:
             cameraY = playerRect.y - cameraTop
         elif playerScreenY + playerRect.height > cameraBottom:
             cameraY = playerRect.bottom - cameraBottom
+        #Fix bottom camera view
+        minCameraY = 0
+        maxCameraY = mapHeight - screenHeight
+
+        if cameraY < minCameraY:
+            cameraY = minCameraY
+
+        if cameraY > maxCameraY:
+            cameraY = maxCameraY
         #Draw update
         playLevel(selectedCharacter,guantletLevel,playerImage,playerRect,levelMap,cameraY)
 
