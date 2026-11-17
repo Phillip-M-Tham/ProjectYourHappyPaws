@@ -222,6 +222,7 @@ playerSpeed=10
 
 #level camera renderer
 cameraY=0
+wallTile=pygame.image.load(Root/"Pics"/"Level"/"Bricks.png").convert_alpha()
 
 def findPlayerStart(theMap):
     playerRow=-1
@@ -266,7 +267,7 @@ def drawLevelMap(theMap,cameraY):
             if tile == "S":
                 pygame.draw.rect(screen,"green",tileRect)
             if tile == "1":
-                pygame.draw.rect(screen,"white",tileRect)
+                screen.blit(wallTile,tileRect)
 
 def playLevel(character,level,playerImg,playerRect,theMap,cameraY):
     screen.fill("black")
@@ -289,7 +290,15 @@ def startLevelManager(character,gameMode,level):
     else:
         pass
     return level, levelMap
-
+#Collision Detection
+def getSolidTiles(levelMap):
+    solidTiles = []
+    for row in range(len(levelMap)):
+        for col in range(len(levelMap[row])):
+            if levelMap[row][col] == "1":
+                tileRect = pygame.Rect(col * tileSize,row * tileSize,tileSize,tileSize)
+                solidTiles.append(tileRect)
+    return solidTiles
 
 
 #start game loop
@@ -380,6 +389,7 @@ while running:
                     playerImage, playerRect=spawnPlayer(levelMap,playerPath)
                     mapHeight = len(levelMap) * tileSize
                     cameraY = mapHeight - screenHeight
+                    solidTiles = getSolidTiles(levelMap)
                 aButtonPressed=True
         else:
             aButtonPressed=False
@@ -538,7 +548,13 @@ while running:
         # Player input
         if abs(leftY) > 8000:
             normalizedY = leftY / 32767
+            oldY = playerRect.y
             playerRect.y -= normalizedY * playerSpeed
+            #Collision detection for wall tiles
+            for tileRect in solidTiles:
+                if playerRect.colliderect(tileRect):
+                    playerRect.y = oldY
+                    break
 
         cameraTop = screenHeight * 0.25
         cameraBottom = screenHeight
