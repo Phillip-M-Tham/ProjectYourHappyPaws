@@ -295,7 +295,7 @@ def analyzeSong(theSong):
     #load the song, combine Audacity Stereo enabled audio to mono for processing
     songData,sampleRate=librosa.load(theSong,sr=None,mono=True)
     #Id pitch frequences that range from C2 to C7
-    pitchFrequency,pitchFlag,pitchConfidence=librosa.pyin(songData,fmin=librosa.note_to_hz("C1"),fmax=librosa.note_to_hz("C7"),sr=sampleRate)
+    pitchFrequency,pitchFlag,pitchConfidence=librosa.pyin(songData,fmin=librosa.note_to_hz("C1"),fmax=librosa.note_to_hz("C7"),sr=sampleRate,frame_length=4096,hop_length=512)
     return pitchFrequency,pitchFlag,pitchConfidence,sampleRate
 
 def playLevel(character,level,playerImg,playerRect,theMap,cameraY):
@@ -321,7 +321,7 @@ def startLevelManager(character,gameMode,level):
             #print("Spawn tile:", levelMap[playerStartRow][playerStartCol],"Found at ",playerStartRow,playerStartCol)
     else:
         pass
-    return level, levelMap,songPitch,songPitchFlag,songPitchConfidence,sampleRate
+    return level, levelMap,songPitch,songPitchFlag,songPitchConfidence,sampleRate,songPath
 #Collision Detection
 def getSolidTiles(levelMap):
     solidTiles = []
@@ -414,7 +414,7 @@ while running:
                     selectedCharacter=0
                 elif(characterSelect==True and selectedCharacter==0):
                     characterSelect=False
-                    guantletLevel,levelMap,songPitchFrequency,songPitchFlag,songPitchConfidence,sampleRate=startLevelManager(0,gameModes[0],-1)
+                    guantletLevel,levelMap,songPitchFrequency,songPitchFlag,songPitchConfidence,sampleRate,songPath=startLevelManager(0,gameModes[0],-1)
                     # TEMPORARY DIAGNOSTIC
                     #plotPitch(songPitchFrequency,sampleRate)
                     
@@ -423,6 +423,8 @@ while running:
                     mapHeight = len(levelMap) * tileSize
                     cameraY = mapHeight - screenHeight
                     solidTiles = getSolidTiles(levelMap)
+                    pygame.mixer.music.load(songPath)
+                    pygame.mixer.music.play()
                     playingLevel=True
                 aButtonPressed=True
         else:
@@ -580,21 +582,43 @@ while running:
     elif playingLevel==True:
         #Get motor/virtual input
         #READ RAW PITCH DATA
-        if pitchIndex < len(songPitchFrequency):
+        songTimeMS=pygame.mixer.music.get_pos()
+        if songTimeMS >= 0:#len(songPitchFrequency):
         #     print(
         #         "Pitch:", songPitchFrequency[pitchIndex],
         #         "Flag:", songPitchFlag[pitchIndex],
         #         "Confidence:", songPitchConfidence[pitchIndex]
         #     )
-            currentPitch = songPitchFrequency[pitchIndex]
-            if not np.isnan(currentPitch):
-                virtualInput = normalizePitch(currentPitch)
+            #convert MS to seconds
+            songTimeSeconds=songTimeMS/1000.0
+            pitchIndex=int(songTimeSeconds*sampleRate/512)
+            if pitchIndex < len(songPitchFrequency):
+                currentPitch = songPitchFrequency[pitchIndex]
+                if not np.isnan(currentPitch):
+                    virtualInput = normalizePitch(currentPitch)
+                    # TEMPORARY: pretend motor perfectly tracks reference
+                    dummyMotorOutput = virtualInput
 
-                print(
-                    "Pitch:", currentPitch,
-                    "Virtual Input:", virtualInput
-                )
-            pitchIndex += 1
+                    oldy=playerRect.y
+                    #move relative to current player pos
+                    playerRect.y -= dummyMotorOutput*playerSpeed
+
+                    # Collision detection
+                    for tileRect in solidTiles:
+                        if playerRect.colliderect(tileRect):
+                            playerRect.y = oldy
+                            break
+                    # Map motor output [-1,+1] to player vertical position
+                    # minPlayerY = 0
+                    # maxPlayerY = mapHeight - playerRect.height
+
+                    # playerRect.y = maxPlayerY - (((dummyMotorOutput + 1) / 2) * (maxPlayerY - minPlayerY))
+
+                    # print(
+                    #     "Pitch:", currentPitch,
+                    #     "Virtual Input:", virtualInput
+                    # )
+            #pitchIndex += 1
         #Get player input
         # Player input
         if abs(leftY) > 8000:
