@@ -229,6 +229,7 @@ wallTile=pygame.image.load(Root/"Pics"/"Level"/"Bricks.png").convert_alpha()
 
 #song analyzation
 pitchIndex=0
+dummyTempOutput = 0.0
 
 def findPlayerStart(theMap):
     playerRow=-1
@@ -285,6 +286,20 @@ def plotPitch(pitchFrequency, sampleRate):
     plt.ylabel("Pitch (Hz)")
     plt.show()
 
+def plotTempo(localTempo, sampleRate):
+
+    tempoTime = librosa.times_like(
+        localTempo,
+        sr=sampleRate,
+        hop_length=512
+    )
+
+    plt.plot(tempoTime, localTempo)
+    plt.xlabel("Time (seconds)")
+    plt.ylabel("Local Tempo (BPM)")
+    plt.title("Local Tempo Over Song")
+    plt.show()
+
 def normalizePitch(pitch):
     minPitch = librosa.note_to_hz("C1")
     maxPitch = librosa.note_to_hz("C7")
@@ -296,7 +311,12 @@ def analyzeSong(theSong):
     songData,sampleRate=librosa.load(theSong,sr=None,mono=True)
     #Id pitch frequences that range from C2 to C7
     pitchFrequency,pitchFlag,pitchConfidence=librosa.pyin(songData,fmin=librosa.note_to_hz("C1"),fmax=librosa.note_to_hz("C7"),sr=sampleRate,frame_length=4096,hop_length=512)
-    return pitchFrequency,pitchFlag,pitchConfidence,sampleRate
+    #BPM analyzation
+    tempoCap, beatFrames=librosa.beat.beat_track(y=songData,sr=sampleRate)
+    print("Detected BMP: ",tempoCap)
+    localTempo=librosa.feature.tempo(y=songData,sr=sampleRate,hop_length=512,aggregate=None)
+
+    return pitchFrequency,pitchFlag,pitchConfidence,sampleRate,tempoCap,localTempo
 
 def playLevel(character,level,playerImg,playerRect,theMap,cameraY):
     screen.fill("black")
@@ -315,13 +335,10 @@ def startLevelManager(character,gameMode,level):
             playerStartRow,playerStartCol=findPlayerStart(levelMap)
             #analyze song for level
             songPath=Root/"Levels"/"Songs"/"Caged_Elephant_NoRestForTheWicked.wav"
-            songPitch,songPitchFlag,songPitchConfidence,sampleRate=analyzeSong(songPath)
-            #print("Rows:", len(levelMap))
-            #print("Columns:", len(levelMap[0]))
-            #print("Spawn tile:", levelMap[playerStartRow][playerStartCol],"Found at ",playerStartRow,playerStartCol)
+            songPitch,songPitchFlag,songPitchConfidence,sampleRate,tempoCap,localTempo=analyzeSong(songPath)
     else:
         pass
-    return level, levelMap,songPitch,songPitchFlag,songPitchConfidence,sampleRate,songPath
+    return level, levelMap,songPitch,songPitchFlag,songPitchConfidence,sampleRate,songPath,tempoCap,localTempo
 #Collision Detection
 def getSolidTiles(levelMap):
     solidTiles = []
@@ -414,10 +431,10 @@ while running:
                     selectedCharacter=0
                 elif(characterSelect==True and selectedCharacter==0):
                     characterSelect=False
-                    guantletLevel,levelMap,songPitchFrequency,songPitchFlag,songPitchConfidence,sampleRate,songPath=startLevelManager(0,gameModes[0],-1)
+                    guantletLevel,levelMap,songPitchFrequency,songPitchFlag,songPitchConfidence,sampleRate,songPath,tempoCap,localTempo=startLevelManager(0,gameModes[0],-1)
                     # TEMPORARY DIAGNOSTIC
                     #plotPitch(songPitchFrequency,sampleRate)
-                    
+                    plotTempo(localTempo, sampleRate)
                     playerPath=Root/"Pics"/"Chars"/"char1.png"
                     playerImage, playerRect=spawnPlayer(levelMap,playerPath)
                     mapHeight = len(levelMap) * tileSize
@@ -584,11 +601,6 @@ while running:
         #READ RAW PITCH DATA
         songTimeMS=pygame.mixer.music.get_pos()
         if songTimeMS >= 0:#len(songPitchFrequency):
-        #     print(
-        #         "Pitch:", songPitchFrequency[pitchIndex],
-        #         "Flag:", songPitchFlag[pitchIndex],
-        #         "Confidence:", songPitchConfidence[pitchIndex]
-        #     )
             #convert MS to seconds
             songTimeSeconds=songTimeMS/1000.0
             pitchIndex=int(songTimeSeconds*sampleRate/512)
@@ -608,17 +620,8 @@ while running:
                         if playerRect.colliderect(tileRect):
                             playerRect.y = oldy
                             break
-                    # Map motor output [-1,+1] to player vertical position
-                    # minPlayerY = 0
-                    # maxPlayerY = mapHeight - playerRect.height
+        #Get temp board/ treadmill input
 
-                    # playerRect.y = maxPlayerY - (((dummyMotorOutput + 1) / 2) * (maxPlayerY - minPlayerY))
-
-                    # print(
-                    #     "Pitch:", currentPitch,
-                    #     "Virtual Input:", virtualInput
-                    # )
-            #pitchIndex += 1
         #Get player input
         # Player input
         if abs(leftY) > 8000:
