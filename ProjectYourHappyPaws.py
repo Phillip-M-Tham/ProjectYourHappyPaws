@@ -1,8 +1,11 @@
 import ctypes
 from ctypes import wintypes
-
 import pygame
 from pathlib import Path
+import librosa
+import matplotlib.pyplot as plt
+import numpy as np
+
 #set root to current file
 Root=Path(__file__).parent
 backgroundPath = Root/"Pics"/"MainMenu"/"BackgroundPic.png"
@@ -224,6 +227,9 @@ playerSpeed=10
 cameraY=0
 wallTile=pygame.image.load(Root/"Pics"/"Level"/"Bricks.png").convert_alpha()
 
+#song analyzation
+pitchIndex=0
+
 def findPlayerStart(theMap):
     playerRow=-1
     playerCol=-1
@@ -260,14 +266,37 @@ def drawLevelMap(theMap,cameraY):
             tile = theMap[row][col]
             worldX = col * tileSize
             worldY = row * tileSize
-
             screenY=worldY-cameraY
-
             tileRect = pygame.Rect(worldX,screenY,tileSize,tileSize)
             if tile == "S":
                 pygame.draw.rect(screen,"green",tileRect)
             if tile == "1":
                 screen.blit(wallTile,tileRect)
+
+def plotPitch(pitchFrequency, sampleRate):
+
+    pitchTime = librosa.times_like(
+        pitchFrequency,
+        sr=sampleRate
+    )
+
+    plt.plot(pitchTime, pitchFrequency)
+    plt.xlabel("Time (seconds)")
+    plt.ylabel("Pitch (Hz)")
+    plt.show()
+
+def normalizePitch(pitch):
+    minPitch = librosa.note_to_hz("C1")
+    maxPitch = librosa.note_to_hz("C7")
+    normalizedPitch = 2 * (np.log2(pitch / minPitch) / np.log2(maxPitch / minPitch)) - 1
+    return normalizedPitch
+
+def analyzeSong(theSong):
+    #load the song, combine Audacity Stereo enabled audio to mono for processing
+    songData,sampleRate=librosa.load(theSong,sr=None,mono=True)
+    #Id pitch frequences that range from C2 to C7
+    pitchFrequency,pitchFlag,pitchConfidence=librosa.pyin(songData,fmin=librosa.note_to_hz("C1"),fmax=librosa.note_to_hz("C7"),sr=sampleRate)
+    return pitchFrequency,pitchFlag,pitchConfidence,sampleRate
 
 def playLevel(character,level,playerImg,playerRect,theMap,cameraY):
     screen.fill("black")
@@ -284,12 +313,15 @@ def startLevelManager(character,gameMode,level):
             levelPath=Root/"Levels"/"Level1.txt"
             levelMap = loadLevel(levelPath)
             playerStartRow,playerStartCol=findPlayerStart(levelMap)
-            print("Rows:", len(levelMap))
-            print("Columns:", len(levelMap[0]))
-            print("Spawn tile:", levelMap[playerStartRow][playerStartCol],"Found at ",playerStartRow,playerStartCol)
+            #analyze song for level
+            songPath=Root/"Levels"/"Songs"/"Caged_Elephant_NoRestForTheWicked.wav"
+            songPitch,songPitchFlag,songPitchConfidence,sampleRate=analyzeSong(songPath)
+            #print("Rows:", len(levelMap))
+            #print("Columns:", len(levelMap[0]))
+            #print("Spawn tile:", levelMap[playerStartRow][playerStartCol],"Found at ",playerStartRow,playerStartCol)
     else:
         pass
-    return level, levelMap
+    return level, levelMap,songPitch,songPitchFlag,songPitchConfidence,sampleRate
 #Collision Detection
 def getSolidTiles(levelMap):
     solidTiles = []
@@ -299,7 +331,6 @@ def getSolidTiles(levelMap):
                 tileRect = pygame.Rect(col * tileSize,row * tileSize,tileSize,tileSize)
                 solidTiles.append(tileRect)
     return solidTiles
-
 
 #start game loop
 while running:
@@ -383,13 +414,16 @@ while running:
                     selectedCharacter=0
                 elif(characterSelect==True and selectedCharacter==0):
                     characterSelect=False
-                    playingLevel=True
-                    guantletLevel,levelMap=startLevelManager(0,gameModes[0],-1)
+                    guantletLevel,levelMap,songPitchFrequency,songPitchFlag,songPitchConfidence,sampleRate=startLevelManager(0,gameModes[0],-1)
+                    # TEMPORARY DIAGNOSTIC
+                    #plotPitch(songPitchFrequency,sampleRate)
+                    
                     playerPath=Root/"Pics"/"Chars"/"char1.png"
                     playerImage, playerRect=spawnPlayer(levelMap,playerPath)
                     mapHeight = len(levelMap) * tileSize
                     cameraY = mapHeight - screenHeight
                     solidTiles = getSolidTiles(levelMap)
+                    playingLevel=True
                 aButtonPressed=True
         else:
             aButtonPressed=False
@@ -544,6 +578,23 @@ while running:
             pygame.draw.rect(screen,"black",char3Btn)
         screen.blit(char3Text, char3TextRect)
     elif playingLevel==True:
+        #Get motor/virtual input
+        #READ RAW PITCH DATA
+        if pitchIndex < len(songPitchFrequency):
+        #     print(
+        #         "Pitch:", songPitchFrequency[pitchIndex],
+        #         "Flag:", songPitchFlag[pitchIndex],
+        #         "Confidence:", songPitchConfidence[pitchIndex]
+        #     )
+            currentPitch = songPitchFrequency[pitchIndex]
+            if not np.isnan(currentPitch):
+                virtualInput = normalizePitch(currentPitch)
+
+                print(
+                    "Pitch:", currentPitch,
+                    "Virtual Input:", virtualInput
+                )
+            pitchIndex += 1
         #Get player input
         # Player input
         if abs(leftY) > 8000:
