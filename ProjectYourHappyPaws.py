@@ -225,11 +225,14 @@ playerSpeed=10
 
 #level camera renderer
 cameraY=0
+cameraX = 0.0
 wallTile=pygame.image.load(Root/"Pics"/"Level"/"Bricks.png").convert_alpha()
 
-#song analyzation
-pitchIndex=0
+#song analyzation Pitch
+songAnalysisIndex=0
 dummyTempOutput = 0.0
+#song analyzation BPM
+maxTreadmillSpeed = 10
 
 def findPlayerStart(theMap):
     playerRow=-1
@@ -261,18 +264,32 @@ def loadLevel(fileName):
 
     return levelMap
 
-def drawLevelMap(theMap,cameraY):
+def drawLevelMap(theMap,cameraY,cameraX):
+    mapWidth=len(theMap[0])*tileSize
+
     for row in range(len(theMap)):
         for col in range(len(theMap[row])):
             tile = theMap[row][col]
             worldX = col * tileSize
             worldY = row * tileSize
+            #screenX=worldX-cameraX
             screenY=worldY-cameraY
-            tileRect = pygame.Rect(worldX,screenY,tileSize,tileSize)
+
+            #seamless treadmill
+            # First copy of Level 1
+            screenX1 = worldX - cameraX
+
+            # Second copy immediately after Level 1
+            screenX2 = screenX1 + mapWidth
+
+            tileRect1 = pygame.Rect(screenX1,screenY,tileSize,tileSize)
+            tileRect2 = pygame.Rect(screenX2,screenY,tileSize,tileSize)
             if tile == "S":
-                pygame.draw.rect(screen,"green",tileRect)
+                pygame.draw.rect(screen,"green",tileRect1)
+                pygame.draw.rect(screen,"green",tileRect2)
             if tile == "1":
-                screen.blit(wallTile,tileRect)
+                screen.blit(wallTile,tileRect1)
+                screen.blit(wallTile,tileRect2)
 
 def plotPitch(pitchFrequency, sampleRate):
 
@@ -306,6 +323,13 @@ def normalizePitch(pitch):
     normalizedPitch = 2 * (np.log2(pitch / minPitch) / np.log2(maxPitch / minPitch)) - 1
     return normalizedPitch
 
+def normalizeTempo(tempo):
+    maxTempo = 200.0
+    normalizedTempo = tempo / maxTempo
+    # Saturate between 0 and 1
+    normalizedTempo = max(0.0, min(normalizedTempo, 1.0))
+    return normalizedTempo
+
 def analyzeSong(theSong):
     #load the song, combine Audacity Stereo enabled audio to mono for processing
     songData,sampleRate=librosa.load(theSong,sr=None,mono=True)
@@ -318,10 +342,10 @@ def analyzeSong(theSong):
 
     return pitchFrequency,pitchFlag,pitchConfidence,sampleRate,tempoCap,localTempo
 
-def playLevel(character,level,playerImg,playerRect,theMap,cameraY):
+def playLevel(character,level,playerImg,playerRect,theMap,cameraY,cameraX):
     screen.fill("black")
     testText=menuFont.render(f"character {character} - level {level}",True,"white")
-    drawLevelMap(theMap,cameraY)
+    drawLevelMap(theMap,cameraY,cameraX)
     playerScreenY = playerRect.y - cameraY
     #screen.blit(testText,(100,100))
     screen.blit(playerImg,(playerRect.x,playerScreenY))
@@ -434,7 +458,7 @@ while running:
                     guantletLevel,levelMap,songPitchFrequency,songPitchFlag,songPitchConfidence,sampleRate,songPath,tempoCap,localTempo=startLevelManager(0,gameModes[0],-1)
                     # TEMPORARY DIAGNOSTIC
                     #plotPitch(songPitchFrequency,sampleRate)
-                    plotTempo(localTempo, sampleRate)
+                    #plotTempo(localTempo, sampleRate)
                     playerPath=Root/"Pics"/"Chars"/"char1.png"
                     playerImage, playerRect=spawnPlayer(levelMap,playerPath)
                     mapHeight = len(levelMap) * tileSize
@@ -603,9 +627,9 @@ while running:
         if songTimeMS >= 0:#len(songPitchFrequency):
             #convert MS to seconds
             songTimeSeconds=songTimeMS/1000.0
-            pitchIndex=int(songTimeSeconds*sampleRate/512)
-            if pitchIndex < len(songPitchFrequency):
-                currentPitch = songPitchFrequency[pitchIndex]
+            songAnalysisIndex=int(songTimeSeconds*sampleRate/512)
+            if songAnalysisIndex < len(songPitchFrequency):
+                currentPitch = songPitchFrequency[songAnalysisIndex]
                 if not np.isnan(currentPitch):
                     virtualInput = normalizePitch(currentPitch)
                     # TEMPORARY: pretend motor perfectly tracks reference
@@ -621,7 +645,24 @@ while running:
                             playerRect.y = oldy
                             break
         #Get temp board/ treadmill input
+            if songAnalysisIndex < len(localTempo):
+                currentTempo = localTempo[songAnalysisIndex]
+                virtualTempInput = normalizeTempo(currentTempo)
+                # TEMPORARY: perfect temperature response
+                dummyTempOutput = virtualTempInput
+                treadmillSpeed = (dummyTempOutput * maxTreadmillSpeed)
+                mapWidth = len(levelMap[0]) * tileSize
 
+                #seamless treadmill
+                cameraX += treadmillSpeed
+
+                if cameraX >= mapWidth:
+                    cameraX -= mapWidth
+                #cameraX += treadmillSpeed
+                # print(
+                #     "BPM:", currentTempo,
+                #     "Temp Reference:", virtualTempInput
+                # )
         #Get player input
         # Player input
         if abs(leftY) > 8000:
@@ -653,7 +694,7 @@ while running:
         if cameraY > maxCameraY:
             cameraY = maxCameraY
         #Draw update
-        playLevel(selectedCharacter,guantletLevel,playerImage,playerRect,levelMap,cameraY)
+        playLevel(selectedCharacter,guantletLevel,playerImage,playerRect,levelMap,cameraY,cameraX)
 
     #set up exit
     for event in pygame.event.get():
